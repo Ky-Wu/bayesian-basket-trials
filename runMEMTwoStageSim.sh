@@ -9,12 +9,14 @@
 #$ -M $USER@mail #don't change this line, finds your email in the system
 # Notify when
 #$ -m ea #sends you an email (b) when the job begins (e) when job ends (a) when job is aborted (error)
-
+#$ -t 1-112:1 # 1 to 112, with step size of 1
 
 # load the job environment:
 . /u/local/Modules/default/init/modules.sh
-module load R
 module load gcc/11.3.0
+module load glpk/5.0
+module load R/4.5.0-BIO
+
 
 echo ${SGE_TASK_ID}
 echo $1

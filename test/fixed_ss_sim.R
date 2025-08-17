@@ -2,12 +2,12 @@ library(ggplot2)
 library(data.table)
 rm(list = ls())
 
-source(file.path(getwd(), "src", "maxent_MEM.R"))
 source(file.path(getwd(), "src", "LMEM.R"))
 source(file.path(getwd(), "src", "uniform.R"))
 source(file.path(getwd(), "src", "sim_helper.R"))
 source(file.path(getwd(), "src", "pooled.R"))
-source(file.path(getwd(), "src", "twostage_prunepool.R"))
+#source(file.path(getwd(), "src", "twostage_prunepool.R"))
+source(file.path(getwd(), "src", "MEM.R"))
 
 scenarios <- data.frame(
   "Global_Null" = c(0.05, 0.05, 0.05, 0.05),
@@ -40,7 +40,7 @@ computeESSFixedSS <- function(p0 = 0.05, p1 = 0.20, n_i, n_b, r,
   y_H0 <-  yi_H0 + rbinom(length(n_i) * n_sim, n_b - n_i, p0)
   y_HA <- yi_HA + rbinom(length(n_i) * n_sim, n_b - n_i, p1)
   interim_accept <- matrix(rowSums(yi_H0) > r,
-                          nrow = n_sim, ncol = length(n_i))
+                           nrow = n_sim, ncol = length(n_i))
   Pb_H0 <- vapply(seq_len(n_sim), function(i) twostage_ef(n_b, yi_H0[i,], y_H0[i,], p0),
                   numeric(length(n_b)))
   sorted_Pbs <- sort(unique(as.vector(Pb_H0)), decreasing = FALSE)
@@ -169,8 +169,10 @@ LMEM_res3 <- evaluateTwoStageScenarios(n_i,
                                        scenarios, p0,
                                        LMEM_setting3$r,
                                        LMEM_setting3$pp_threshold,
-                                       LMEM_ef3, n_sim = 200)
-### LMEM 2-stage ###
+                                       LMEM_ef3, n_sim = 4000)
+### MEM ###
+
+MEM_res <- readRDS(file.path(getwd(), "output", "fixedss_sim", "MEM_res.rds"))
 
 
 getResLongDT <- function(method_name, power_tab, type1_errors, sc, p0 = 0.05, p1 = 0.2) {
@@ -190,14 +192,13 @@ getResLongDT <- function(method_name, power_tab, type1_errors, sc, p0 = 0.05, p1
   data
 }
 
-load(file.path(getwd(), "output", "LMEM_twostage.RData"))
-
+source(file.path(getwd(), "test", "prunepool_sim.R"))
 
 indx <- c(1,2,5,6,7)
 LMEM_dt <- getResLongDT("LMEM(0, 3)", LMEM_res$basket_power, LMEM_res$type1_error,
                         t(scenarios), 0.05, 0.2)
 LMEM_dt2 <- getResLongDT("LMEM(0, 5)", LMEM_res2$basket_power, LMEM_res2$type1_error,
-                        t(scenarios), 0.05, 0.2)
+                         t(scenarios), 0.05, 0.2)
 LMEM_dt3 <- getResLongDT("LMEM(5, 5)", LMEM_res3$basket_power, LMEM_res3$type1_error,
                          t(scenarios), 0.05, 0.2)
 PP_dt <- getResLongDT("Prune-pool", prunepool_res$basket_power, prunepool_res$type1_error,
@@ -206,16 +207,15 @@ u_dt <- getResLongDT("Uniform", uniform_res$basket_power, uniform_res$type1_erro
                      t(scenarios), 0.05, 0.2)
 p_dt <- getResLongDT("Pooled", pooled_res$basket_power, pooled_res$type1_error,
                      t(scenarios), 0.05, 0.2)
-LMEM_twostage_dt <- getResLongDT("LMEM(0, 3) Two-Stage", LMEM_twostage$basket_power,
-                                 LMEM_twostage$type1_error,
-                                 t(scenarios), 0.05, 0.2)
-all_dt <- rbindlist(list(LMEM_dt, LMEM_dt2, LMEM_dt3, PP_dt, u_dt, p_dt, LMEM_twostage_dt))
+MEM_dt <- getResLongDT("MEM(0.1)", MEM_res$basket_power, MEM_res$type1_error,
+                       t(scenarios), 0.05, 0.2)
+all_dt <- rbindlist(list(LMEM_dt, LMEM_dt2, LMEM_dt3, PP_dt, u_dt, p_dt, MEM_dt))
 #all_dt <- all_dt[scenario %in% indx]
 all_dt[, scenario_label := as.character(n_promising)]
 all_dt[scenario == 3, scenario_label := "One in the Middle"]
 all_dt[scenario == 4, scenario_label := "Linear"]
 all_dt[, active := ifelse(promising, "Active", "Inactive")]
-comparison_plot <- ggplot(data = all_dt) +
+comparison_plot <- ggplot(data = all_dt[scenario %in% indx,]) +
   geom_jitter(aes(x = scenario_label, y = accept_prob, shape = method, color = method),
               height = 0, width = 0.2, alpha = 0.8, size = 3) +
   theme_bw() +
@@ -227,24 +227,3 @@ comparison_plot
 ggsave(file.path(getwd(), "output", "eqss_comparison_plot.png"),
        comparison_plot,
        dpi = 500, width = 8, height = 6)
-
-pp_rules <- data.table(
-  method = c("LMEM(0, 3)", "LMEM(0, 5)", "LMEM(5, 5)", "LMEM(0, 3) Two-Stage", "Uniform", "Pooled"),
-  interim_ss = sum(n_i),
-  interim_threshold = c(2, 2, 2, "-", 2, 2),
-  interim_pp_threshold = c("-", "-", "-", signif(LMEM_twostage$it, 3), "-", "-"),
-  total_ss = sum(n_b),
-  pp_threshold = c(signif(LMEM_res$pp_threshold, 3),
-                   signif(LMEM_res2$pp_threshold, 3),
-                   signif(LMEM_res3$pp_threshold, 3),
-                   signif(LMEM_twostage$ft, 3),
-                   signif(uniform_res$pp_threshold, 3),
-                   signif(pooled_res$pp_threshold, 3))
-)
-colnames(pp_rules) <- c("Method", "Interim SS", "R_1", "q_1", "Total SS", "f^{\\star}")
-print(xtable::xtable(pp_rules, caption = "Minimum posterior probabilities to declare efficacy under
-                     each design with fixed interim sample size (9 per basket), interim threshold (> 2 total responses), and
-                     second-stage cumulative sample size (21 per basket). The Type I error rate is controlled at 0.07 under the global null.",
-                     label = "tab:eqss_design_pps", align = rep("c", ncol(pp_rules) + 1)),
-      type = "latex", include.rownames = FALSE,
-      file.path(getwd(), "output", "eqss_design_pps.tex"))

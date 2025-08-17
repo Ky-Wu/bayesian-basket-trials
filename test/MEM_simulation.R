@@ -1,4 +1,3 @@
-library(ggplot2)
 library(data.table)
 rm(list = ls())
 set.seed(1130)
@@ -19,7 +18,7 @@ scenarios <- data.frame(
   "Half" = c(0.2, 0.2, 0.05, 0.05)
 )
 
-n_sim <- 5000
+n_sim <- 200
 p0 <- 0.05
 p1 <- 0.20
 alpha2 <- 0.05
@@ -33,12 +32,15 @@ cat("Calibrating MEM two-stage design...")
 alpha1 <- MEM_param_grid[sim_i,]$alpha1
 beta1 <- MEM_param_grid[sim_i,]$beta1
 #cat("alpha1: ", alpha1, "| beta1: ", beta1, "\n")
-calibrate <- calibrateTwoStage(B = 4, p0 = 0.05, p1 = 0.20,
-                               alpha1 = alpha1, beta1 = beta1,
-                               alpha2 = alpha2, beta2 = beta2, n_sim = n_sim,
-                               MEMEfficacy)
+cal_time <- system.time({
+  calibrate <- calibrateTwoStage(B = 4, p0 = 0.05, p1 = 0.20,
+                                 alpha1 = alpha1, beta1 = beta1,
+                                 alpha2 = alpha2, beta2 = beta2, n_sim = n_sim,
+                                 MEMEfficacy)
+})
+
 res <- data.frame(alpha1 = alpha1, beta1 = beta1,
-                  ESS = calibrate$ESS)
+                  ESS = calibrate$ESS, cal_time = cal_time[[3]])
 
 name <- paste0("MEM_sim", sim_i, ".csv")
 dir.create(file.path(getwd(), "output", "MEM_simulation"), showWarnings = FALSE)

@@ -177,7 +177,7 @@ computeExactBinomSS <- function(p0, p1, alpha1, beta1, B) {
 }
 
 calibrateTwoStage <- function(B, p0, p1, alpha1, beta1, alpha2, beta2, n_sim = 1000,
-                              efficacyFunction, y_sim = NULL) {
+                              efficacyFunction, y_sim = NULL, increment_start = 1) {
   total_ni <- computeExactBinomSS(p0, p1, alpha1, beta1, B)
   # pooled interim analysis: reject if total responses is less than or equal to r
   interim_threshold <- qbinom(1 - alpha1, size = total_ni, prob = p0, lower.tail = TRUE)
@@ -191,7 +191,7 @@ calibrateTwoStage <- function(B, p0, p1, alpha1, beta1, alpha2, beta2, n_sim = 1
     efficacyFunction(n_b, y, p0)
   }
   n_i <- rep(total_ni / B, B)
-  n_b <- rep(total_ni / B + 1, B)
+  n_b <- rep(total_ni / B + increment_start, B)
   yi_H0 <- matrix(rbinom(length(n_i) * n_sim, rep(n_i, times = n_sim),
                          prob = rep(p0, times = n_sim)), nrow = n_sim, byrow = TRUE)
   yi_HA <-  matrix(rbinom(length(n_i) * n_sim, rep(n_i, times = n_sim),

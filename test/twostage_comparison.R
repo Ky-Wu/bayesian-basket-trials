@@ -1,4 +1,3 @@
-library(ggplot2)
 library(data.table)
 rm(list = ls())
 set.seed(1130)

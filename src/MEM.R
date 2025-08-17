@@ -1,6 +1,6 @@
 library(basket)
 
-MEMEfficacy <- function(n_b, y, p0, prior_prob) {
+MEMEfficacy <- function(n_b, y, p0, prior_prob = 0.1) {
   res <- basket::basket(y, n_b, name = letters[seq_along(n_b)], p0 = p0,
                         method = "exact",
                         prior = diag(length(n_b)) * (1 - prior_prob) +
