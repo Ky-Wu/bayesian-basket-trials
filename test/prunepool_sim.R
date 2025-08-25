@@ -13,7 +13,7 @@ scenarios <- data.frame(
 )
 n_i <- c(9, 9, 9, 10)
 n_b <- c(21, 21, 21, 21)
-n_sim <- 10000
+n_sim <- 20000
 p0 <- 0.05
 n_s <- length(scenarios)
 k <- length(n_b)

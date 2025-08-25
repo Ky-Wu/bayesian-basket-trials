@@ -1,8 +1,9 @@
 library(data.table)
 library(ggplot2)
 
-LMEM_res <- readRDS(file.path(getwd(), "output", "twostage_comparison", "LMEM_0_3.rds"))
+LMEM_res <- readRDS(file.path(getwd(), "output", "twostage_comparison", "LMEM_0_0.rds"))
 LMEM_res2 <- readRDS(file.path(getwd(), "output", "twostage_comparison", "LMEM_0_5.rds"))
+LMEM_res3 <- readRDS(file.path(getwd(), "output", "twostage_comparison", "LMEM_15_0.rds"))
 prunepool_res <- readRDS(file.path(getwd(), "output", "twostage_comparison", "prunepool_res.rds"))
 u_res2 <- readRDS(file.path(getwd(), "output", "twostage_comparison", "basketwise.rds"))
 p_res2 <- readRDS(file.path(getwd(), "output", "twostage_comparison", "pooled.rds"))
@@ -37,11 +38,14 @@ scenarios <- data.frame(
   "Half" = c(0.2, 0.2, 0.05, 0.05)
 )
 
-LMEM_dt <- getResLongDT("LMEM(0, 3)", LMEM_res$basket_power, LMEM_res$type1_error,
+LMEM_dt <- getResLongDT("LMEM(0, 0)", LMEM_res$basket_power, LMEM_res$type1_error,
                         LMEM_res$ESS, LMEM_res$FWERs,
                         t(scenarios), 0.05, 0.2)
 LMEM_dt2 <- getResLongDT("LMEM(0, 5)", LMEM_res2$basket_power, LMEM_res2$type1_error,
                          LMEM_res2$ESS, LMEM_res2$FWERs,
+                         t(scenarios), 0.05, 0.2)
+LMEM_dt3 <- getResLongDT("LMEM(15, 0)", LMEM_res3$basket_power, LMEM_res3$type1_error,
+                         LMEM_res3$ESS, LMEM_res3$FWERs,
                          t(scenarios), 0.05, 0.2)
 PP_dt <- getResLongDT("Prune-pool", prunepool_res$basket_power, prunepool_res$type1_error,
                       prunepool_res$ESS, prunepool_res$FWER,
@@ -58,17 +62,19 @@ ps_dt <- getResLongDT("Parallel Simon", PS_res$basket_power, PS_res$type1_error,
 MEM_dt <- getResLongDT("MEM(0.1)", MEM_res$basket_power, MEM_res$type1_errors,
                        MEM_res$ESS, MEM_res$FWERs,
                        t(scenarios), 0.05, 0.2)
-all_dt <- rbindlist(list(LMEM_dt, LMEM_dt2, PP_dt, u_dt, p_dt, ps_dt, MEM_dt))
+all_dt <- rbindlist(list(LMEM_dt, LMEM_dt2, LMEM_dt3, MEM_dt, PP_dt, u_dt, p_dt, ps_dt))
 #all_dt <- all_dt[scenario %in% indx]
 all_dt[, scenario_label := paste(as.character(n_promising), "Active")]
 all_dt[scenario == 3, scenario_label := "One in the Middle"]
 all_dt[scenario == 4, scenario_label := "Linear"]
+indx <- c(1,2,5,6,7)
+all_dt <- all_dt[scenario %in% indx,]
 comparison_plot <- ggplot(data = all_dt) +
   geom_jitter(aes(x = scenario_label, y = accept_prob, shape = promising, color = method),
               height = 0, width = 0.15, alpha = 0.8, size = 2.5) +
   theme_bw() +
   labs(x = "Scenario", y = "Acceptance Probability") +
-  scale_shape_manual(values = c(0, 17))
+  scale_shape_manual(values = c(0, 17), name = "Basket Type", labels = c("Inactive", "Active"))
 
 ess_plot <- ggplot(data = all_dt[basket == 1,]) +
   geom_col(aes(x = scenario_label, y = ESS, fill = method), color = "black", alpha = 0.8,
@@ -96,10 +102,9 @@ ggsave(file.path(getwd(), "output", "fwer_plot.png"), fwer_plot,
        dpi = 500, width = 8, height = 6)
 
 
-sc <- as.data.table(t(scenarios[c(1, 6, 7, 5, 2, 4, 3)]))
+sc <- as.data.table(t(scenarios[c(1, 6, 7, 5, 2)]))
 sc <- cbind(data.table(Scenario = c("0 Active (Global Null)", "1 Active", "2 Active",
-                                    "3 Active", "4 Active (Global Alternative)",
-                                    "Linear", "One in the Middle")), sc)
+                                    "3 Active", "4 Active (Global Alternative)")), sc)
 colnames(sc) <- c("Scenario", "Basket 1", "Basket 2", "Basket 3", "Basket 4")
 
 library(xtable)
@@ -110,25 +115,26 @@ print(xtable::xtable(sc, caption = "Response rates of simulated responses under 
       file.path(getwd(), "output", "sim_scenarios.tex"))
 
 rules <- data.table(
-  method = c("Uniform", "Pooled", "Parallel Simon", "MEM(0.1)", "LMEM(0, 3)", "LMEM(0, 5)", "Prune-pool"),
-  interim_ss = as.integer(c(sum(u_res2$n_i), sum(p_res2$n_i), sum(PS_res$n_i),
-                            sum(MEM_res$n_i),
-                            sum(LMEM_res$n_i), sum(LMEM_res2$n_i), sum(prunepool_res$n_i))),
-  aggregated_futility = c("Yes", "Yes", "No", "Yes", "Yes", "Yes", "Yes"),
-  interim_threshold = as.integer(c(u_res2$interim_threshold, p_res2$interim_threshold,
-                                   PS_res$R1[1], MEM_res$interim_threshold,
+  method = c("Parallel Simon", "Pooled", "Uniform", "MEM(0.1)", "Prune-pool", "LMEM(0, 3)", "LMEM(0, 5)", "LMEM(15, 0)"),
+  interim_ss = as.integer(c(sum(PS_res$n_i), sum(p_res2$n_i), sum(u_res2$n_i),
+                            sum(MEM_res$n_i), sum(prunepool_res$n_i), sum(LMEM_res$n_i), sum(LMEM_res2$n_i),
+                            sum(LMEM_res3$n_i))),
+  aggregated_futility = c("No", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
+  interim_threshold = as.integer(c(PS_res$R1[1], p_res2$interim_threshold, u_res2$interim_threshold,
+                                   MEM_res$interim_threshold, prunepool_res$R1,
                                    LMEM_res$interim_threshold, LMEM_res2$interim_threshold,
-                                   prunepool_res$R1)),
-  total_ss = as.integer(c(sum(u_res2$n_b), sum(p_res2$n_b), sum(PS_res$n_b),
-                          sum(MEM_res$n_b),
-                          sum(LMEM_res$n_b), sum(LMEM_res2$n_b), sum(prunepool_res$n_b))),
-  pp_threshold = c(signif(u_res2$pp_threshold, 3),
+                                   LMEM_res3$interim_threshold)),
+  total_ss = as.integer(c(sum(PS_res$n_b), sum(p_res2$n_b), sum(u_res2$n_b),
+                          sum(MEM_res$n_b), sum(prunepool_res$n_b),
+                          sum(LMEM_res$n_b), sum(LMEM_res2$n_b), sum(LMEM_res3$n_b))),
+  pp_threshold = c("-",
                    signif(p_res2$pp_threshold, 3),
+                   signif(u_res2$pp_threshold, 3),
                    "-",
                    signif(MEM_res$pp_threshold, 3),
                    signif(LMEM_res$pp_threshold, 3),
                    signif(LMEM_res2$pp_threshold, 3),
-                   "-")
+                   signif(LMEM_res3$pp_threshold, 3))
   # prune_threshold = c("-", "-", 5, "-", "-", 1),
   #  pooled_threshold = c("-", "-", "-", "-", "-", "Q(M; 21, 0.018)")
 )

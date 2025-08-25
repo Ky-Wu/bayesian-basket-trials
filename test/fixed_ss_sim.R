@@ -100,7 +100,7 @@ LMEM_res <- evaluateTwoStageScenarios(n_i,
 
 for (i in 1:nrow(param_grid)) {
   res <- computeESSFixedSS(p0, p1, n_i, n_b, param_grid[i,]$r,
-                           PooledBasketEfficacy, alpha2)
+                           PooledBasketEfficacy, alpha2, n_sim = 20000)
   param_grid[i,]$ESS <- res$ESS
   param_grid[i,]$power <- res$HA_power
   param_grid[i,]$type1_error <- res$alpha2_estimate
@@ -111,7 +111,7 @@ pooled_res <- evaluateTwoStageScenarios(n_i, n_b,
                                         scenarios, p0,
                                         pooled_setting$r,
                                         pooled_setting$pp_threshold,
-                                        PooledBasketEfficacy, n_sim = 4000)
+                                        PooledBasketEfficacy, n_sim = 20000)
 for (i in 1:nrow(param_grid)) {
   print(i)
   res <- computeESSFixedSS(p0, p1, n_i, n_b, param_grid[i,]$r,
@@ -227,3 +227,28 @@ comparison_plot
 ggsave(file.path(getwd(), "output", "eqss_comparison_plot.png"),
        comparison_plot,
        dpi = 500, width = 8, height = 6)
+
+
+pp_rules <- data.table(
+  method = c("LMEM(0, 3)", "LMEM(0, 5)", "LMEM(5, 5)", "MEM(0.1)", "Uniform", "Pooled"),
+  interim_ss = sum(n_i),
+  interim_threshold = c(2, 2, 2, 2, 2, 2),
+  #interim_pp_threshold = c("-", "-", "-", signif(LMEM_twostage$it, 3), "-", "-"),
+  total_ss = sum(n_b),
+  pp_threshold = c(signif(LMEM_res$pp_threshold, 5),
+                   signif(LMEM_res2$pp_threshold, 5),
+                   signif(LMEM_res3$pp_threshold, 5),
+                   signif(MEM_res$pp_threshold, 5),
+                   signif(uniform_res$pp_threshold, 5),
+                   signif(pooled_res$pp_threshold, 5))
+)
+pp_rules$interim_ss <- as.integer(pp_rules$interim_ss)
+pp_rules$interim_threshold <- as.integer(pp_rules$interim_threshold)
+pp_rules$total_ss <- as.integer(pp_rules$total_ss)
+colnames(pp_rules) <- c("Method", "Interim SS", "Interim Threshold", "Total Trial Size", "PP Threshold")
+print(xtable::xtable(pp_rules, caption = "Minimum posterior probabilities to declare efficacy in a basket under
+                     each design with fixed interim sample size (9 per basket), interim threshold (2 total responses), and
+                     second-stage cumulative sample size (21 per basket). The Type I error rate is controlled at 7\\% under the global null.",
+                     label = "tab:eqss_design_pps", align = rep("c", ncol(pp_rules) + 1), digits = 3),
+      type = "latex", include.rownames = FALSE,
+      file.path(getwd(), "output", "eqss_design_pps.tex"))

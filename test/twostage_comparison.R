@@ -110,7 +110,7 @@ p_res2
 
 # LMEM method
 LMEM_ef <- function(n_b, y, p0) LMEMBasketEfficacy(n_b, y, p0, a = 1, b = 1,
-                                                   d1 = 0, d2 = 3,
+                                                   d1 = 0, d2 = 0,
                                                    WW_method = FALSE)
 LMEM_param_grid <- param_grid
 LMEM_param_grid$ESS <- 0
@@ -119,7 +119,8 @@ for(i in seq(1, nrow(LMEM_param_grid))) {
   alpha1 <- LMEM_param_grid[i,]$alpha1
   beta1 <- LMEM_param_grid[i,]$beta1
   #cat("alpha1: ", alpha1, "| beta1: ", beta1, "\n")
-  calibrate <- calibrateTwoStage(B = 4, p0 = 0.05, p1 = 0.20,
+  calibrate <- calibrateTwoStage(B = 4, p0 = 0.05,
+                                 p1 = 0.20,
                                  alpha1 = alpha1,
                                  beta1 = beta1,
                                  alpha2 = alpha2,
@@ -146,7 +147,7 @@ LMEM_res
 
 
 # LMEM method 2: more conservative borrowing prior
-LMEM_ef2 <- function(n_b, y, p0) LMEMBasketEfficacy(n_b, y, p0, a = 1, b = 1, d1 = 0, d2 = 5,
+LMEM_ef2 <- function(n_b, y, p0) LMEMBasketEfficacy(n_b, y, p0, a = 1, b = 1, d1 = 3, d2 = 3,
                                                    WW_method = FALSE)
 LMEM_param_grid2 <- param_grid
 LMEM_param_grid2$ESS <- 0
@@ -179,10 +180,46 @@ system.time({
 })
 LMEM_res2
 
+
+
+# LMEM method 3: most conservative borrowing prior
+LMEM_ef3 <- function(n_b, y, p0) LMEMBasketEfficacy(n_b, y, p0, a = 1, b = 1, d1 = 5, d2 = 5,
+                                                    WW_method = FALSE)
+LMEM_param_grid3 <- param_grid
+LMEM_param_grid3$ESS <- 0
+cat("Calibrating LMEM(3, 3) two-stage design...")
+for(i in seq(1, nrow(LMEM_param_grid3))) {
+  alpha1 <- LMEM_param_grid3[i,]$alpha1
+  beta1 <- LMEM_param_grid3[i,]$beta1
+  #cat("alpha1: ", alpha1, "| beta1: ", beta1, "\n")
+  calibrate <- calibrateTwoStage(B = 4, p0 = 0.05, p1 = 0.20,
+                                 alpha1 = alpha1, beta1 = beta1,
+                                 alpha2 = alpha2, beta2 = beta2, n_sim = n_sim,
+                                 LMEM_ef3)
+  LMEM_param_grid3[i,]$ESS <- calibrate$ESS
+  #cat("ESS: ", calibrate$ESS, "\n")
+}
+alpha1 <- LMEM_param_grid3[which.min(LMEM_param_grid3$ESS),]$alpha1 # 0.35
+beta1 <- LMEM_param_grid3[which.min(LMEM_param_grid3$ESS),]$beta1 # 0.04
+LMEM_calibrate3 <- calibrateTwoStage(B = 4, p0 = 0.05, p1 = 0.20, alpha1 = alpha1, beta1 = beta1,
+                                     alpha2 = alpha2,
+                                     beta2 = beta2,
+                                     n_sim = n_sim,
+                                     LMEM_ef3)
+system.time({
+  LMEM_res3 <- evaluateTwoStageScenarios(LMEM_calibrate3$n_i,
+                                         LMEM_calibrate3$n_b,
+                                         scenarios, p0 = 0.05,
+                                         LMEM_calibrate3$interim_threshold,
+                                         LMEM_calibrate3$pp_threshold,
+                                         LMEM_ef3, n_sim = n_sim)
+})
+LMEM_res3
+
 cat("All done! Saving results...")
 dir.create(file.path(getwd(), "output", "twostage_comparison"), showWarnings = FALSE)
 saveRDS(u_res2, file.path(getwd(), "output", "twostage_comparison", "basketwise.rds"))
 saveRDS(p_res2, file.path(getwd(), "output", "twostage_comparison", "pooled.rds"))
-saveRDS(LMEM_res, file.path(getwd(), "output", "twostage_comparison", "LMEM_0_3.rds"))
-saveRDS(LMEM_res2, file.path(getwd(), "output", "twostage_comparison", "LMEM_0_5.rds"))
-
+saveRDS(LMEM_res, file.path(getwd(), "output", "twostage_comparison", "LMEM_0_0.rds"))
+saveRDS(LMEM_res2, file.path(getwd(), "output", "twostage_comparison", "LMEM_3_0.rds"))
+saveRDS(LMEM_res3, file.path(getwd(), "output", "twostage_comparison", "LMEM_5_5.rds"))
