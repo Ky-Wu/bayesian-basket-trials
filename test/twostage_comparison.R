@@ -147,7 +147,8 @@ LMEM_res
 
 
 # LMEM method 2: more conservative borrowing prior
-LMEM_ef2 <- function(n_b, y, p0) LMEMBasketEfficacy(n_b, y, p0, a = 1, b = 1, d1 = 3, d2 = 3,
+LMEM_ef2 <- function(n_b, y, p0) LMEMBasketEfficacy(n_b, y, p0, a = 1, b = 1,
+                                                    d1 = 0, d2 = 5,
                                                    WW_method = FALSE)
 LMEM_param_grid2 <- param_grid
 LMEM_param_grid2$ESS <- 0
@@ -183,7 +184,8 @@ LMEM_res2
 
 
 # LMEM method 3: most conservative borrowing prior
-LMEM_ef3 <- function(n_b, y, p0) LMEMBasketEfficacy(n_b, y, p0, a = 1, b = 1, d1 = 5, d2 = 5,
+LMEM_ef3 <- function(n_b, y, p0) LMEMBasketEfficacy(n_b, y, p0, a = 1, b = 1,
+                                                    d1 = 15, d2 = 0,
                                                     WW_method = FALSE)
 LMEM_param_grid3 <- param_grid
 LMEM_param_grid3$ESS <- 0
@@ -221,5 +223,5 @@ dir.create(file.path(getwd(), "output", "twostage_comparison"), showWarnings = F
 saveRDS(u_res2, file.path(getwd(), "output", "twostage_comparison", "basketwise.rds"))
 saveRDS(p_res2, file.path(getwd(), "output", "twostage_comparison", "pooled.rds"))
 saveRDS(LMEM_res, file.path(getwd(), "output", "twostage_comparison", "LMEM_0_0.rds"))
-saveRDS(LMEM_res2, file.path(getwd(), "output", "twostage_comparison", "LMEM_3_0.rds"))
-saveRDS(LMEM_res3, file.path(getwd(), "output", "twostage_comparison", "LMEM_5_5.rds"))
+saveRDS(LMEM_res2, file.path(getwd(), "output", "twostage_comparison", "LMEM_0_5.rds"))
+saveRDS(LMEM_res3, file.path(getwd(), "output", "twostage_comparison", "LMEM_15_0.rds"))
