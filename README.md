@@ -1,6 +1,6 @@
-# Beyond Pooled and Independent Analyses in Basket Trials
+# Optimal Local Exchangeability Two-Stage Designs for Basket Trials with Aggregated Futility Analysis
 
-This repository contains code implementation for the simulation comparison in "Beyond Pooled and Independent Analyses in Basket Trials."
+This repository contains code implementation for the simulation comparison in "Optimal Local Exchangeability Two-Stage Designs for Basket Trials with Aggregated Futility Analysis."
 
 Simulation files:
 
