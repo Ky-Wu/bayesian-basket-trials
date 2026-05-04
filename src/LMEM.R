@@ -11,19 +11,20 @@ log_dbinombeta <- function(n, yi, a, b) {
   b_new <- b + n - yi
   lbeta(a_new, b_new) + lchoose(n, yi) - lbeta(a, b)
 }
+basket_weights <- function(n, yi, a, b) {
+  a_new <- a + yi
+  b_new <- b + n - yi
+  lbeta(a_new, b_new) - lbeta(a, b)
+}
 
-gridSearchLMEMPartition <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1, WW_method = FALSE) {
+gridSearchLMEMPartition <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1) {
   stopifnot(length(y) <= 10, length(y) == length(n_b))
   parts <- listParts(length(y))
   log_weights <- vapply(parts, function(part) {
     ll <- sum(vapply(part, function(x) {
       ys <- y[x]
       ns <- n_b[x]
-      if (WW_method) {
-        log_dbinombeta(sum(ns), sum(ys), a, b) - lchoose(sum(ns), sum(ys))
-      } else {
-        log_dbinombeta(sum(ns), sum(ys), a, b)
-      }
+      basket_weights(sum(ns), sum(ys), a, b)
     }, numeric(1)))
     ll
   }, numeric(1))
@@ -35,8 +36,8 @@ gridSearchLMEMPartition <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1, WW_met
        post_prob = prob_weights[chosen_partition] / sum(prob_weights))
 }
 
-LMEMBasketEfficacy <- function(n_b, y, p0, a = 1, b = 1, d1 = 0, d2 = 2, WW_method = FALSE) {
-  res <- gridSearchLMEMPartition(n_b, y, d1 = d1, d2 = d2, WW_method = WW_method)
+LMEMBasketEfficacy <- function(n_b, y, p0, a = 1, b = 1, d1 = 0, d2 = 2) {
+  res <- gridSearchLMEMPartition(n_b, y, d1 = d1, d2 = d2)
   part <- res$part
   pp <- res$post_prob
   out <- numeric(length(y))
@@ -83,7 +84,7 @@ evaluateLMEMPostPart <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1, WW_method
     ll <- sum(vapply(part, function(x) {
       ys <- y[x]
       ns <- n_b[x]
-      log_dbinombeta(sum(ns), sum(ys), a, b)
+      basket_weights(sum(ns), sum(ys), a, b)
     }, numeric(1)))
     ll
   }, numeric(1))
