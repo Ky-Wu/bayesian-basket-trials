@@ -6,27 +6,10 @@ logsumexp_weights <- function(x) {
   exp(x - d)
 }
 
-log_dbinombeta <- function(n, yi, a, b) {
-  a_new <- a + yi
-  b_new <- b + n - yi
-  lbeta(a_new, b_new) + lchoose(n, yi) - lbeta(a, b)
-}
 basket_weight <- function(n, yi, a, b) {
   a_new <- a + yi
   b_new <- b + n - yi
   lbeta(a_new, b_new) - lbeta(a, b)
-}
-
-compute_fisher_power <- function(n, y, delta2) {
-  p <- fisher.test(cbind(y, n - y), alternative = "two.sided",
-              simulate.p.value = FALSE)$p.value
-  p
-}
-
-compute_fpowers <- function(ni, yi, ns, ys, delta2) {
-  vapply(seq_along(ns),
-         function(i) compute_fisher_power(c(ni, ns[i]), c(yi, ys[i]), delta2),
-         numeric(1))
 }
 
 computePosteriorKLDivergences <- function(ni, yi, ns, ys, a = 1, b = 1) {
