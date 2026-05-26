@@ -47,6 +47,12 @@ gridSearchLMEM2Partition <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1) {
 }
 
 LMEM2BasketEfficacy <- function(n_b, y, p0, a = 1, b = 1, d1 = 0, d2 = 2) {
+  # n_b: numeric vector, patients in each basket
+  # y: numeric vector, observed responses
+  # p0: numeric scalar: historical/control response rate
+  # a, b: parameters of beta-prior on basket response rates
+  # d1: prior hyperparameter controlling propensity towards borrowing
+  # d2: prior hyperparameter controlling degree of borrowing
   res <- gridSearchLMEM2Partition(n_b, y, d1 = d1, d2 = d2)
   part <- res$part
   pp <- res$post_prob
