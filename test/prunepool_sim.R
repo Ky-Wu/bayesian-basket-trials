@@ -1,7 +1,12 @@
+# Evaluation of Prune-pool design by Jing et al. (2022)
+# We evaluate the design for the homogeneous setting with p0 = 0.05 and p1 = 0.2.
+
+# load libraries
 library(poisbinom)
 library(parallel)
 mc.cores <- detectCores() - 1
 
+# scenarios for evaluation
 scenarios <- data.frame(
   "Global_Null" = c(0.05, 0.05, 0.05, 0.05),
   "Global_Alternative" = c(0.2, 0.2, 0.2, 0.2),
@@ -11,12 +16,17 @@ scenarios <- data.frame(
   "Bad_Nugget" = c(0.2, 0.05, 0.05, 0.05),
   "Half" = c(0.2, 0.20, 0.05, 0.05)
 )
+# Sample sizes and decisions rules of optimal design are found in Jing et al. (2022)
 n_i <- c(9, 9, 9, 10)
 n_b <- c(21, 21, 21, 21)
+# number of simulations to use, can use a lot because prune-pool is easy to evaluate
 n_sim <- 20000
 p0 <- 0.05
 n_s <- length(scenarios)
 k <- length(n_b)
+
+# function that constructs a efficacy function for a given prune-pool design
+# Efficacy function outputs decisions from observed data in a simulated trial
 constructPPRule <- function(R1, r, alpha2) {
   function(n_i, n_b, yi, y, p0) {
     stopifnot(length(yi) == length(y))
@@ -32,7 +42,9 @@ constructPPRule <- function(R1, r, alpha2) {
       decisions <- rep(FALSE, K)
       if (!all(prune)) {
         R2 <- qpoisbinom(1 - alpha2, rep(p0, sum(n_b[!prune])))
+        #p_value <- pbinom(sum(y_notpruned), sum(n_b[!prune]), p0, lower.tail = FALSE)
         decisions[!prune] <- (sum(y_notpruned) >= R2)
+        #decisions[!prune] <- (p_value < alpha2)
       }
     }
     list(decisions = decisions,
@@ -41,21 +53,29 @@ constructPPRule <- function(R1, r, alpha2) {
   }
 }
 
+# Optimal design for this setting found in Jing et al. (2022)
 PPRule <- constructPPRule(3, 2, 0.018)
 
+# pre-simulate data for each scenario
+
+# interim data
 yi_sim_list <- lapply(scenarios, function(scenario) {
   tp <- as.vector(scenario)
   yi_sim <- matrix(rbinom(length(n_i) * n_sim, rep(n_i, times = n_sim),
                           prob = rep(tp, times = n_sim)), nrow = n_sim, byrow = TRUE)
+  yi_sim
 })
+# second-stage data
 y_sim_list <- lapply(seq_along(scenarios), function(i) {
   scenario <- scenarios[[i]]
   tp <- as.vector(scenario)
   y_sim <- matrix(rbinom(length(n_b) * n_sim, rep(n_b - n_i, times = n_sim),
                          prob = rep(tp, times = n_sim)), nrow = n_sim, byrow = TRUE)
   y_sim <- yi_sim_list[[i]] + y_sim
+  y_sim
 })
 
+# scenario evaluation function
 evaluatePPScenario <- function(PPRule, yi_sim, y_sim, promising) {
   res <- lapply(seq_len(nrow(yi_sim)),
                 function(i) PPRule(n_i, n_b, yi_sim[i,], y_sim[i,], p0 = p0))
@@ -67,24 +87,29 @@ evaluatePPScenario <- function(PPRule, yi_sim, y_sim, promising) {
        FWER = mean(FWER))
 }
 
+# evaluate each scenario
 res <- mclapply(seq_len(n_s), function(i) {
   tp <- as.vector(scenarios[,i])
   promising <- tp > p0
   c(evaluatePPScenario(PPRule, yi_sim_list[[i]], y_sim_list[[i]], promising),
     list(promising = promising))
 }, mc.cores = mc.cores)
+# extract basket-wise Type I errors
 type1_errors <- t(vapply(res, function(x) {
   out <- rep(NA, k)
   out[!x$promising] <- x$reject[!x$promising]
   out
 }, numeric(k)))
+# extract basket-wise power
 basket_power <- t(vapply(res, function(x) {
   out <- rep(NA, k)
   out[x$promising] <- x$reject[x$promising]
   out
 }, numeric(k)))
+# extract effective sample size and family-wise error rates
 ESS <- vapply(res, function(x) x$ESS, numeric(1))
 FWERs <- vapply(res, function(x) x$FWER, numeric(1))
+# save results in list
 prunepool_res <- list(scenarios = t(scenarios),
      basket_power = basket_power,
      type1_errors = type1_errors,
@@ -95,4 +120,5 @@ prunepool_res <- list(scenarios = t(scenarios),
      R1 = 3,
      n_sim = n_sim)
 
+# save results to file
 saveRDS(prunepool_res, file.path(getwd(), "output", "twostage_comparison", "prunepool_res.rds"))
