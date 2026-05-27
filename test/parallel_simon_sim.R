@@ -1,3 +1,6 @@
+# Evaluate Parallel-Simon's design for optimal design comparison
+
+# Load in libraries
 library(clinfun)
 library(parallel)
 mc.cores <- detectCores() - 1
@@ -11,12 +14,14 @@ scenarios <- data.frame(
   "Bad_Nugget" = c(0.2, 0.05, 0.05, 0.05),
   "Half" = c(0.2, 0.20, 0.05, 0.05)
 )
+# Find optimal design
 ph2simon(0.05, 0.20, 0.05, 0.20)
-K <- 4
-n_i <- rep(10, K)
-n_b <- rep(29, K)
-R1 <- rep(0, K)
-r <- rep(3, K)
+# Set optimal design parameters
+B <- 4
+n_i <- rep(10, B)
+n_b <- rep(29, B)
+R1 <- rep(0, B)
+r <- rep(3, B)
 n_sim <- 10000
 p0 <- 0.05
 n_s <- length(scenarios)
