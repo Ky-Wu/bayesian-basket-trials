@@ -1,22 +1,18 @@
 library(partitions)
 
-logsumexp_weights <- function(x) {
-  xmax <- max(x)
-  d <- xmax + log(sum(exp(x - xmax)))
-  exp(x - d)
-}
-
-log_dbinombeta <- function(n, yi, a, b) {
-  a_new <- a + yi
-  b_new <- b + n - yi
-  lbeta(a_new, b_new) + lchoose(n, yi) - lbeta(a, b)
-}
-basket_weights <- function(n, yi, a, b) {
-  a_new <- a + yi
-  b_new <- b + n - yi
-  lbeta(a_new, b_new) - lbeta(a, b)
-}
-
+#' LMEM Partition Posterior Probability Calculations
+#'
+#' @param n_b Vector of basket sample sizes.
+#' @param y Vector of basket responses.
+#' @param d1 Design prior hyperparameter controlling propensity towards borrowing.
+#' @param d2 Analysis prior hyperparameter controlling degree of borrowing.
+#' @param a Hyperparameter of beta prior on basket response rate.
+#' @param b Hyperparameter of beta prior on basket response rate.
+#'
+#' @return
+#' @export
+#'
+#' @examples
 gridSearchLMEMPartition <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1) {
   stopifnot(length(y) <= 10, length(y) == length(n_b))
   parts <- listParts(length(y))
@@ -24,7 +20,7 @@ gridSearchLMEMPartition <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1) {
     ll <- sum(vapply(part, function(x) {
       ys <- y[x]
       ns <- n_b[x]
-      basket_weights(sum(ns), sum(ys), a, b)
+      basket_weight(sum(ns), sum(ys), a, b)
     }, numeric(1)))
     ll
   }, numeric(1))
@@ -36,7 +32,21 @@ gridSearchLMEMPartition <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1) {
        post_prob = prob_weights[chosen_partition] / sum(prob_weights))
 }
 
-LMEMBasketEfficacy <- function(n_b, y, p0, a = 1, b = 1, d1 = 0, d2 = 2) {
+#' LMEM Posterior Analysis
+#'
+#' @param n_b Vector of basket sample sizes.
+#' @param y Vector of basket observed responses.
+#' @param p0 Historical/control response rate.
+#' @param a Hyperparameter of beta priors on basket response rates.
+#' @param b Hyperparameter of beta priors on basket response rates.
+#' @param d1 Design prior hyperparameter controlling propensity towards borrowing.
+#' @param d2 Analysis prior hyperparameter controlling degree of borrowing.
+#'
+#' @return Vector of posterior efficacy probabilities under the LMEM framework.
+#' @export
+#'
+#' @examples
+LMEMBasketEfficacy <- function(n_b, y, p0, a = 1, b = 1, d1 = 0, d2 = 0) {
   res <- gridSearchLMEMPartition(n_b, y, d1 = d1, d2 = d2)
   part <- res$part
   pp <- res$post_prob
@@ -76,7 +86,7 @@ evaluateLMEMPriorPart <- function(n_b, y, delta = 0) {
              prior_logweights = log_weights)
 }
 
-evaluateLMEMPostPart <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1, WW_method = TRUE) {
+evaluateLMEMPostPart <- function(n_b, y, d1 = 0, d2 = 0, a = 1, b = 1) {
   parts <- listParts(length(y))
   search_prior <- evaluateLMEMPriorPart(n_b, y, delta = d1)
   pool_prior <- evaluateLMEMPriorPart(n_b, y, delta = d2)
@@ -84,7 +94,7 @@ evaluateLMEMPostPart <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1, WW_method
     ll <- sum(vapply(part, function(x) {
       ys <- y[x]
       ns <- n_b[x]
-      basket_weights(sum(ns), sum(ys), a, b)
+      basket_weight(sum(ns), sum(ys), a, b)
     }, numeric(1)))
     ll
   }, numeric(1))
@@ -95,6 +105,37 @@ evaluateLMEMPostPart <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1, WW_method
              search_post = search_post,
              pool_prior = pool_prior$prior_density,
              pool_post = pool_post)
+}
+
+#' Log-sum-exp trick for normalizing small weights
+#'
+#' @param x Vector of unnormalized weights.
+#'
+#' @return Vector of normalized weights.
+#' @export
+#'
+#' @examples
+logsumexp_weights <- function(x) {
+  xmax <- max(x)
+  d <- xmax + log(sum(exp(x - xmax)))
+  exp(x - d)
+}
+
+#' Unnormalized Marginal Density
+#'
+#' @param n Vector of sample sizes.
+#' @param yi Vector of observed responses.
+#' @param a Hyperparameter of beta priors on basket response rates.
+#' @param b Hyperparameter of beta priors on basket response rates.
+#'
+#' @return Vector of unnormalized marginal densities.
+#' @export
+#'
+#' @examples
+basket_weight <- function(n, yi, a, b) {
+  a_new <- a + yi
+  b_new <- b + n - yi
+  lbeta(a_new, b_new) - lbeta(a, b)
 }
 
 

@@ -1,17 +1,18 @@
 library(partitions)
 
-logsumexp_weights <- function(x) {
-  xmax <- max(x)
-  d <- xmax + log(sum(exp(x - xmax)))
-  exp(x - d)
-}
-
-basket_weight <- function(n, yi, a, b) {
-  a_new <- a + yi
-  b_new <- b + n - yi
-  lbeta(a_new, b_new) - lbeta(a, b)
-}
-
+#' Basket Posterior KL Divergences
+#'
+#' @param ni Target basket sample size.
+#' @param yi Target basket observed responses.
+#' @param ns Vector of external basket sample sizes.
+#' @param ys Vector of external basket observed responses.
+#' @param a Hyperparameter of beta prior on basket response rate
+#' @param b Hyperparameter of beta prior on basket response rate
+#'
+#' @return Computed KL divergences of response rate posterior
+#' distribution in target basket from that of external baskets.
+#' @export
+#'
 computePosteriorKLDivergences <- function(ni, yi, ns, ys, a = 1, b = 1) {
   a1 <- a + yi
   b1 <- b + ni - yi
@@ -26,7 +27,21 @@ computePosteriorKLDivergences <- function(ni, yi, ns, ys, a = 1, b = 1) {
          }, numeric(1))
 }
 
+#' LMEM2 Partition Posterior Probability Calculations
+#'
+#' @param n_b Vector of basket sample sizes.
+#' @param y Vector of basket responses.
+#' @param d1 Design prior hyperparameter controlling propensity towards borrowing.
+#' @param d2 Analysis prior hyperparameter controlling degree of borrowing.
+#' @param a Hyperparameter of beta prior on basket response rate.
+#' @param b Hyperparameter of beta prior on basket response rate.
+#'
+#' @return
+#' @export
+#'
+#' @examples
 gridSearchLMEM2Partition <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1) {
+
   stopifnot(length(y) <= 10, length(y) == length(n_b))
   parts <- listParts(length(y))
   log_weights <- vapply(parts, function(part) {
@@ -46,13 +61,22 @@ gridSearchLMEM2Partition <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1) {
        post_prob = prob_weights[chosen_partition] / sum(prob_weights))
 }
 
+
+#' LMEM2 Posterior Analysis
+#'
+#' @param n_b Vector of basket sample sizes.
+#' @param y Vector of basket observed responses.
+#' @param p0 Historical/control response rate.
+#' @param a Hyperparameter of beta priors on basket response rates.
+#' @param b Hyperparameter of beta priors on basket response rates.
+#' @param d1 Design prior hyperparameter controlling propensity towards borrowing.
+#' @param d2 Analysis prior hyperparameter controlling degree of borrowing.
+#'
+#' @return Vector of posterior efficacy probabilities under the LMEM2 framework.
+#' @export
+#'
+#' @examples
 LMEM2BasketEfficacy <- function(n_b, y, p0, a = 1, b = 1, d1 = 0, d2 = 2) {
-  # n_b: numeric vector, patients in each basket
-  # y: numeric vector, observed responses
-  # p0: numeric scalar: historical/control response rate
-  # a, b: parameters of beta-prior on basket response rates
-  # d1: prior hyperparameter controlling propensity towards borrowing
-  # d2: prior hyperparameter controlling degree of borrowing
   res <- gridSearchLMEM2Partition(n_b, y, d1 = d1, d2 = d2)
   part <- res$part
   pp <- res$post_prob
@@ -78,6 +102,38 @@ LMEM2BasketEfficacy <- function(n_b, y, p0, a = 1, b = 1, d1 = 0, d2 = 2) {
 }
 
 partitionFormat <- function(part) {
-  parts <- vapply(part, function(x) paste0("(", paste0(x, collapse = ","), ")"), character(1))
+  parts <- vapply(part, function(x) paste0("(", paste0(x, collapse = ","), ")"),
+                  character(1))
   paste0(parts, collapse = "")
+}
+
+#' Log-sum-exp trick for normalizing small weights
+#'
+#' @param x Vector of unnormalized weights.
+#'
+#' @return Vector of normalized weights.
+#' @export
+#'
+#' @examples
+logsumexp_weights <- function(x) {
+  xmax <- max(x)
+  d <- xmax + log(sum(exp(x - xmax)))
+  exp(x - d)
+}
+
+#' Unnormalized Marginal Density
+#'
+#' @param n Vector of sample sizes.
+#' @param yi Vector of observed responses.
+#' @param a Hyperparameter of beta priors on basket response rates.
+#' @param b Hyperparameter of beta priors on basket response rates.
+#'
+#' @return Vector of unnormalized marginal densities.
+#' @export
+#'
+#' @examples
+basket_weight <- function(n, yi, a, b) {
+  a_new <- a + yi
+  b_new <- b + n - yi
+  lbeta(a_new, b_new) - lbeta(a, b)
 }
