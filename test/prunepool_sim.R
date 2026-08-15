@@ -17,7 +17,7 @@ scenarios <- data.frame(
   "Half" = c(0.2, 0.20, 0.05, 0.05)
 )
 # Sample sizes and decisions rules of optimal design are found in Jing et al. (2022)
-n_i <- c(9, 9, 9, 10)
+n_i <- c(7, 7, 7, 7)
 n_b <- c(21, 21, 21, 21)
 # number of simulations to use, can use a lot because prune-pool is easy to evaluate
 n_sim <- 20000
@@ -41,7 +41,7 @@ constructPPRule <- function(R1, r, alpha2) {
       SS <- sum(n_b)
       decisions <- rep(FALSE, K)
       if (!all(prune)) {
-        R2 <- qpoisbinom(1 - alpha2, rep(p0, sum(n_b[!prune])))
+        R2 <- qbinom(1 - alpha2, sum(n_b[!prune]), p0)
         #p_value <- pbinom(sum(y_notpruned), sum(n_b[!prune]), p0, lower.tail = FALSE)
         decisions[!prune] <- (sum(y_notpruned) >= R2)
         #decisions[!prune] <- (p_value < alpha2)
@@ -53,8 +53,13 @@ constructPPRule <- function(R1, r, alpha2) {
   }
 }
 
-# Optimal design for this setting found in Jing et al. (2022)
-PPRule <- constructPPRule(3, 2, 0.018)
+
+# Optimal design for this setting found in src/prunepool/prunepool_optimize.R
+# N = 21, n1 = 7, r = 1, R1 = 4, alpha2_star = 0.0003560104
+R1 <- 4
+r <- 1
+alpha2_star <- 0.0003560104
+PPRule <- constructPPRule(R1, r, alpha2_star)
 
 # pre-simulate data for each scenario
 
