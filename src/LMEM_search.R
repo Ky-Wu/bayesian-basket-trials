@@ -4,18 +4,14 @@ log_dbinombeta <- function(n, yi, a, b) {
   lbeta(a_new, b_new) + lchoose(n, yi) - lbeta(a, b)
 }
 
-stepPartition <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1, WW_method = FALSE) {
+stepPartition <- function(n_b, y, d1 = 0, d2 = 2, a = 1, b = 1) {
   stopifnot(length(y) <= 10, length(y) == length(n_b))
   parts <- listParts(length(y))
   log_weights <- vapply(parts, function(part) {
     ll <- sum(vapply(part, function(x) {
       ys <- y[x]
       ns <- n_b[x]
-      if (WW_method) {
-        log_dbinombeta(sum(ns), sum(ys), a, b) - lchoose(sum(ns), sum(ys))
-      } else {
-        log_dbinombeta(sum(ns), sum(ys), a, b)
-      }
+      log_dbinombeta(sum(ns), sum(ys), a, b)
     }, numeric(1)))
     ll
   }, numeric(1))
