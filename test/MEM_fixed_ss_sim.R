@@ -19,12 +19,11 @@ scenarios <- data.frame(
   "Half" = c(0.2, 0.20, 0.05, 0.05)
 )
 
-n_i <- c(9, 9, 9, 9)
-n_b <- c(21, 21, 21, 21)
+n_i <- c(4, 4, 4, 4)
+n_b <- c(19, 19, 19, 19)
 p0 <- 0.05
 p1 <- 0.20
-alpha2 <- 0.07
-beta2 <- 0.07
+alpha2 <- 0.05
 
 computeESSFixedSS <- function(p0 = 0.05, p1 = 0.20, n_i, n_b, r,
                               efficacyFunction, alpha2, n_sim = 10000) {
@@ -77,7 +76,7 @@ param_grid <- data.table(ESS = 0,
                          power = 0,
                          type1_error = 0,
                          pp_threshold = 0,
-                         r = 2)
+                         r = 1:5)
 
 ### MEM ###
 
@@ -90,7 +89,7 @@ for (i in 1:nrow(param_grid)) {
   param_grid[i,]$pp_threshold <- res$pp_threshold
 }
 #LMEM_setting <- param_grid[ESS == min(ESS[power >= 1 - beta2]),]
-MEM_setting <- param_grid
+MEM_setting <- param_grid[ESS == min(ESS),]
 MEM_res <- evaluateTwoStageScenarios(n_i,
                                      n_b,
                                      scenarios, p0,

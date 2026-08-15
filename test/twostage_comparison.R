@@ -207,9 +207,10 @@ for(i in seq(1, nrow(LMEM2_param_grid2))) {
   LMEM2_param_grid2[i,]$ESS <- calibrate$ESS
   #cat("ESS: ", calibrate$ESS, "\n")
 }
-alpha1 <- LMEM2_param_grid2[which.min(LMEM2_param_grid2$ESS),]$alpha1 # 0.35
-beta1 <- LMEM2_param_grid2[which.min(LMEM2_param_grid2$ESS),]$beta1 # 0.04
-LMEM2_calibrate2 <- calibrateTwoStage(B = 4, p0 = p0, p1 = p1, alpha1 = alpha1, beta1 = beta1,
+alpha1 <- LMEM2_param_grid2[which.min(LMEM2_param_grid2$ESS),]$alpha1 # 0.30
+beta1 <- LMEM2_param_grid2[which.min(LMEM2_param_grid2$ESS),]$beta1 # 0.15
+LMEM2_calibrate2 <- calibrateTwoStage(B = 4, p0 = p0, p1 = p1,
+                                      alpha1 = alpha1, beta1 = beta1,
                                      alpha2 = alpha2,
                                      beta2 = beta2,
                                      n_sim = n_sim,

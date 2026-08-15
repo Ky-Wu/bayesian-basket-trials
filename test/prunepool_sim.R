@@ -56,10 +56,8 @@ constructPPRule <- function(R1, r, alpha2) {
 
 # Optimal design for this setting found in src/prunepool/prunepool_optimize.R
 # N = 21, n1 = 7, r = 1, R1 = 4, alpha2_star = 0.0003560104
-R1 <- 4
-r <- 1
 alpha2_star <- 0.0003560104
-PPRule <- constructPPRule(R1, r, alpha2_star)
+PPRule <- constructPPRule(R1 = 4, r = 1, alpha2_star)
 
 # pre-simulate data for each scenario
 
@@ -122,7 +120,7 @@ prunepool_res <- list(scenarios = t(scenarios),
      FWER = FWERs,
      n_i = n_i,
      n_b = n_b,
-     R1 = 3,
+     R1 = R1,
      n_sim = n_sim)
 
 # save results to file

@@ -26,18 +26,21 @@ scenarios <- data.frame(
   "Half" = c(0.2, 0.20, 0.05, 0.05)
 )
 
-# Simulation settings modeled after Jing et al. (2022)
+# Simulation settings same as MEM optimal design
 # number of patients per basket in interim stage
-n_i <- c(9, 9, 9, 9)
+n_i <- c(4, 4, 4, 4)
 # number of patients per basket total in second stage
 # (including first-stage accrual)
-n_b <- c(21, 21, 21, 21)
+n_b <- c(19, 19, 19, 19)
 # historical/control response rate
 p0 <- 0.05
 # minimal clinically meaningful response rate
 p1 <- 0.20
 # second-stage basket-wise type I error constraint under global null
-alpha2 <- 0.07
+alpha2 <- 0.05
+# interim threshold (reject/stop if total Stage I < R1, or <= r)
+R1 <- 2
+r <- R1 - 1
 
 #' Fixed Sample Size Two-Stage Design Effective Sample Size (ESS) Evaluation
 #'
@@ -75,7 +78,7 @@ computeESSFixedSS <- function(p0 = 0.05, p1 = 0.20, n_i, n_b, r,
                   numeric(length(n_b)))
   sorted_Pbs <- sort(unique(as.vector(Pb_H0)), decreasing = FALSE)
   possible_alpha2s <- vapply(sorted_Pbs, function(x) mean(t(interim_accept) & Pb_H0 >= x), numeric(1))
-  # obtain threshold that controls type I error
+  # obtain threshold that controls type I error while maximizing power
   # assumes equal weighting between baskets and equal sample sizes
   if (any(possible_alpha2s <= alpha2)) {
     pp_threshold <- sorted_Pbs[which.max(possible_alpha2s <= alpha2)]
@@ -101,7 +104,7 @@ computeESSFixedSS <- function(p0 = 0.05, p1 = 0.20, n_i, n_b, r,
        alpha1 = alpha1,
        alpha2 = alpha2)
 }
-r <- 2
+
 
 # LMEM2(-4, -2) efficacy function
 LMEM2_ef <- function(n_b, y, p0) LMEM2BasketEfficacy(n_b, y, p0,
@@ -109,7 +112,7 @@ LMEM2_ef <- function(n_b, y, p0) LMEM2BasketEfficacy(n_b, y, p0,
                                                      d1 = -4, d2 = -2)
 # obtain posterior probability threshold for efficacy decision
 LMEM2_setting <- computeESSFixedSS(p0, p1, n_i, n_b, r,
-                         LMEM2_ef, alpha2, n_sim = 4000)
+                                   LMEM2_ef, alpha2, n_sim = 4000)
 # use obtained threshold for evaluation of each scenario
 LMEM2_res <- evaluateTwoStageScenarios(n_i, n_b,
                                       scenarios, p0, r,
@@ -149,7 +152,7 @@ pooled_res <- evaluateTwoStageScenarios(n_i, n_b,
 
 # Uniform analysis: aggregated futility analysis and independent final analysis
 uniform_setting <- computeESSFixedSS(p0, p1, n_i, n_b, r,
-                                     UniformBasketEfficacy, alpha2 = 0.09,
+                                     UniformBasketEfficacy, alpha2 = alpha2,
                                      n_sim = 20000)
 
 uniform_res <- evaluateTwoStageScenarios(n_i, n_b,
@@ -157,11 +160,12 @@ uniform_res <- evaluateTwoStageScenarios(n_i, n_b,
                                          uniform_setting$pp_threshold,
                                          UniformBasketEfficacy,
                                          n_sim = 20000)
-# MEM analysis: due to computational complexity of MEM, this is handled in
-# a separate file, MEM_fixed_ss_sim.R
 
+# MEM analysis: resuses design from optimal design simulation
 # load in saved results
-MEM_res <- readRDS(file.path(getwd(), "output", "fixedss_sim", "MEM_res.rds"))
+# prunepool design found in src/prunepool/prunepool_optimize.R
+MEM_res <- readRDS(file.path(getwd(), "output", "twostage_comparison", "MEM_0.1.rds"))
+prunepool_res <- readRDS(file.path(getwd(), "output", "fixedss_sim", "prunepool_res.rds"))
 
 
 # formatting function
@@ -183,8 +187,6 @@ getResLongDT <- function(method_name, power_tab, type1_errors,
   data
 }
 
-# Evaluate prune-pool design (equal to optimal prune-pool design)
-source(file.path(getwd(), "test", "prunepool_sim.R"))
 
 indx <- c(1,2,5,6,7)
 # format all results into data tables
@@ -208,16 +210,34 @@ all_dt[, scenario_label := as.character(n_promising)]
 all_dt[scenario == 3, scenario_label := "One in the Middle"]
 all_dt[scenario == 4, scenario_label := "Linear"]
 all_dt[, active := ifelse(promising, "Active", "Inactive")]
+all_dt <- all_dt[, .(accept_prob = mean(accept_prob)),
+                 by = .(scenario, active, method, scenario_label)]
 # plot basket Type I and power metrics across 0-5 active scenarios
 comparison_plot <- ggplot(data = all_dt[scenario %in% indx,]) +
   geom_jitter(aes(x = scenario_label, y = accept_prob, shape = method, color = method),
               height = 0, width = 0.2, alpha = 0.8, size = 3) +
+  geom_hline(aes(yintercept = 0.05), linetype = 2, data = all_dt[active == "Inactive",],
+             linewidth = 0.35) +
   theme_bw() +
   facet_wrap(~active) +
   labs(x = "Number of Active Baskets", y = "Acceptance Probability") +
   scale_shape_manual(values = c(0, 2, 4, 7, 16, 17, 18)) +
   scale_color_manual(values = c("#F8766D", "#CD9600", "#7CAE00", "#00BE67",
                                 "#00A9FF", "#C77CFF", "#FF61CC"))
+
+comparison_plot <- ggplot(data = all_dt[scenario %in% indx,]) +
+  geom_point(aes(x = as.numeric(scenario_label), y = accept_prob, shape = method, color = method),
+             alpha = 0.8) +
+  geom_line(aes(x = as.numeric(scenario_label), y = accept_prob, linetype = method, color = method),
+            alpha = 0.8) +
+  geom_hline(aes(yintercept = 0.05), linetype = 2, data = all_dt[active == "Inactive",],
+             linewidth = 0.35) +
+  theme_bw() +
+  labs(x = "Number of Active Baskets", y = "Acceptance Probability") +
+  facet_wrap(~active) +
+  scale_shape_manual(values = c(0, 2, 4, 7, 8, 16, 17, 18)) +
+  scale_color_manual(values = c("#F8766D", "#CD9600", "#7CAE00", "#00BE67",
+                                "#00BFC4", "#00A9FF", "#C77CFF", "#FF61CC"))
 comparison_plot
 # save plot
 ggsave(file.path(getwd(), "output", "eqss_comparison_plot.png"),
@@ -227,10 +247,8 @@ ggsave(file.path(getwd(), "output", "eqss_comparison_plot.png"),
 # save posterior probability thresholds in data table
 pp_rules <- data.table(
   method = c("LMEM(0)", "LMEM2(-4, -2)", "LMEM2(0, 0.5)", "MEM(0.1)", "Uniform", "Pooled"),
-  interim_ss = sum(n_i),
-  interim_threshold = c(2, 2, 2, 2, 2, 2),
-  #interim_pp_threshold = c("-", "-", "-", signif(LMEM_twostage$it, 3), "-", "-"),
-  total_ss = sum(n_b),
+  #interim_ss = sum(n_i),
+  #total_ss = sum(n_b),
   pp_threshold = c(signif(LMEM_res$pp_threshold, 5),
                    signif(LMEM2_res$pp_threshold, 5),
                    signif(LMEM2_res2$pp_threshold, 5),
@@ -238,13 +256,17 @@ pp_rules <- data.table(
                    signif(uniform_res$pp_threshold, 5),
                    signif(pooled_res$pp_threshold, 5))
 )
-pp_rules$interim_ss <- as.integer(pp_rules$interim_ss)
-pp_rules$interim_threshold <- as.integer(pp_rules$interim_threshold)
-pp_rules$total_ss <- as.integer(pp_rules$total_ss)
-colnames(pp_rules) <- c("Method", "Interim SS", "Interim Threshold", "Total Trial Size", "PP Threshold")
+#pp_rules$interim_ss <- as.integer(pp_rules$interim_ss)
+#pp_rules$interim_threshold <- as.integer(pp_rules$interim_threshold)
+#pp_rules$total_ss <- as.integer(pp_rules$total_ss)
+colnames(pp_rules) <- c("Method", #"Interim SS", "Total Trial Size",
+                        "Posterior Probability Threshold")
 print(xtable::xtable(pp_rules, caption = "Minimum posterior probabilities to declare efficacy in a basket under
-                     each design with fixed interim sample size (9 per basket), interim threshold (2 total responses), and
-                     second-stage cumulative sample size (21 per basket). The Type I error rate is controlled at 7\\% under the global null.",
+                     each design in the fixed sample size design. The minimum posterior probability for each framework was found by maximizing basket-wise power while controlling
+                     the basket-wise Type I error rate at 5\\% under the global null.
+                     To align with the optimal MEM design from the optimal design simulation study,
+                     each design employs a first-stage sample size of 4 patients per basket,
+                     a total sample size of 19 patients per basket, and stops for futility if there are one or zero total responses in the first stage.",
                      label = "tab:eqss_design_pps", align = rep("c", ncol(pp_rules) + 1), digits = 3),
       type = "latex", include.rownames = FALSE,
       file.path(getwd(), "output", "eqss_design_pps.tex"))

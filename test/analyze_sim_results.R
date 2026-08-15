@@ -71,9 +71,14 @@ indx <- c(1,2,5,6,7)
 all_dt <- all_dt[scenario %in% indx,]
 all_dt[, scenario_label := as.character(n_promising)]
 all_dt[, active := ifelse(promising, "Active", "Inactive")]
+all_dt <- all_dt[, .(accept_prob = mean(accept_prob),
+                     ESS = unique(ESS), FWER = unique(FWER)),
+                 by = .(scenario, active, method, scenario_label)]
 comparison_plot <- ggplot(data = all_dt) +
   geom_jitter(aes(x = scenario_label, y = accept_prob, shape = method, color = method),
               height = 0, width = 0.2, alpha = 0.8, size = 2.5) +
+  geom_hline(aes(yintercept = 0.05), linetype = 2, data = all_dt[active == "Inactive",],
+             linewidth = 0.35) +
   theme_bw() +
   labs(x = "Number of Active Baskets", y = "Acceptance Probability") +
   facet_wrap(~active) +
@@ -81,7 +86,22 @@ comparison_plot <- ggplot(data = all_dt) +
   scale_color_manual(values = c("#F8766D", "#CD9600", "#7CAE00", "#00BE67",
                                 "#00BFC4", "#00A9FF", "#C77CFF", "#FF61CC"))
 
-ess_plot <- ggplot(data = all_dt[basket == 1,]) +
+
+comparison_plot <- ggplot(data = all_dt) +
+  geom_point(aes(x = as.numeric(scenario_label), y = accept_prob, shape = method, color = method),
+             alpha = 0.8) +
+  geom_line(aes(x = as.numeric(scenario_label), y = accept_prob, linetype = method, color = method),
+             alpha = 0.8) +
+  geom_hline(aes(yintercept = 0.05), linetype = 2, data = all_dt[active == "Inactive",],
+             linewidth = 0.35) +
+  theme_bw() +
+  labs(x = "Number of Active Baskets", y = "Acceptance Probability") +
+  facet_wrap(~active) +
+  scale_shape_manual(values = c(0, 2, 4, 7, 8, 16, 17, 18)) +
+  scale_color_manual(values = c("#F8766D", "#CD9600", "#7CAE00", "#00BE67",
+                                "#00BFC4", "#00A9FF", "#C77CFF", "#FF61CC"))
+
+ess_plot <- ggplot(data = all_dt) +
   geom_col(aes(x = scenario_label, y = ESS, fill = method), color = "black", alpha = 0.8,
            position = "dodge") +
   theme_bw() +
@@ -89,7 +109,7 @@ ess_plot <- ggplot(data = all_dt[basket == 1,]) +
   labs(x = "Number of Active Baskets", y = "Expected Total Sample Size") +
   scale_fill_manual(values = c("#F8766D", "#CD9600", "#7CAE00", "#00BE67",
                                 "#00BFC4", "#00A9FF", "#C77CFF", "#FF61CC"))
-fwer_plot <- ggplot(data = all_dt[basket == 1 & scenario %in% c(1,4,5,6,7),]) +
+fwer_plot <- ggplot(data = all_dt[scenario %in% c(1,4,5,6,7),]) +
   geom_col(aes(x = scenario_label, y = FWER, fill = method), color = "black", alpha = 0.8,
            position = "dodge") +
   theme_bw() +
