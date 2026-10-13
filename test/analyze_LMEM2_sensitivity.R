@@ -48,6 +48,8 @@ all_results <- lapply(seq_len(nrow(d_df)), function(i) {
                          res$ESS, res$FWERs, t(scenarios), 0.05, 0.20)
   res_dt[, d1 := d1]
   res_dt[, d2 := d2]
+  res_dt[, n_i := res$n_i[1]]
+  res_dt[, n_b := res$n_b[1]]
 })
 all_dt <- rbindlist(all_results)
 
@@ -83,6 +85,28 @@ ess_plot <- ggplot(data = ess_data) +
   theme_bw() +
   labs(x = "Number of Active Baskets", y = "Expected Sample Size")
 ess_plot
+
+trial_size_data <- melt(all_dt, measure.vars = c("n_i", "n_b"),
+                        variable.name = "sample_size_type",
+                        value.name = "sample_size")
+trial_size_data <- unique(trial_size_data[, .(d1, d2, sample_size_type, sample_size)])
+trial_size_plot <- ggplot(data = trial_size_data) +
+  geom_col(aes(x = d2, y = sample_size),
+           position = "dodge", fill = "dodgerblue") +
+  facet_grid(
+    rows = vars(sample_size_type),
+    cols = vars(d1),
+    labeller = labeller(
+      d1 = function(x) paste0("delta_1: ", x),
+      sample_size_type = as_labeller(c(
+        "n_i"  = "First Stage",
+        "n_b" = "Second Stage"
+      ))
+    )
+  ) +
+  labs(x = "delta_2", y = "Sample Size Per Basket") +
+  theme_bw()
+trial_size_plot
 
 ggsave(file.path(getwd(), "output", "LMEM2_sensitivity_analysis", "optimal_oc_plot.png"),
        comparison_plot,

@@ -58,6 +58,7 @@ format_model_name <- function(d1, d2) {
 d1 <- d_df[sim_i,]$d1
 d2 <- d_df[sim_i,]$d2
 print(paste0("Calibrating LMEM2(", d1, ", ", d2, "):"))
+system.time({
 LMEM2_ef <- function(n_b, y, p0) LMEM2BasketEfficacy(n_b, y, p0, a = 1, b = 1,
                                                      d1 = d1, d2 = d2)
 LMEM2_param_grid <- param_grid
@@ -69,7 +70,7 @@ for(j in seq(1, nrow(LMEM2_param_grid))) {
   calibrate <- calibrateTwoStage(B = 4, p0 = p0, p1 = p1,
                                  alpha1 = alpha1, beta1 = beta1,
                                  alpha2 = alpha2, beta2 = beta2, n_sim = n_sim,
-                                 LMEM2_ef, verbose = FALSE)
+                                 LMEM2_ef, verbose = TRUE)
   LMEM2_param_grid[j,]$ESS <- calibrate$ESS
 }
 alpha1 <- LMEM2_param_grid[which.min(LMEM2_param_grid$ESS),]$alpha1
@@ -80,12 +81,13 @@ LMEM2_calibrate <- calibrateTwoStage(B = 4, p0 = p0, p1 = p1,
                                      alpha2 = alpha2,
                                      beta2 = beta2,
                                      n_sim = n_sim,
-                                     LMEM2_ef)
+                                     LMEM2_ef, verbose = TRUE)
 LMEM2_res <- evaluateTwoStageScenarios(LMEM2_calibrate$n_i,
                                        LMEM2_calibrate$n_b,
                                        scenarios, p0 = p0,
                                        LMEM2_calibrate$interim_threshold,
                                        LMEM2_calibrate$pp_threshold,
                                        LMEM2_ef, n_sim = n_sim)
+})
 model_fp <- format_model_name(d1, d2)
 saveRDS(LMEM2_res, file.path(getwd(), "output", "twostage_comparison", model_fp))

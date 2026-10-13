@@ -57,6 +57,8 @@ format_model_name <- function(d1, d2) {
 d1 <- d_df[sim_i,]$d1
 d2 <- d_df[sim_i,]$d2
 print(paste0("Calibrating LMEM2(", d1, ", ", d2, "):"))
+
+system.time({
 LMEM2_ef <- function(n_b, y, p0) LMEM2BasketEfficacy(n_b, y, p0, a = 1, b = 1,
                                                      d1 = d1, d2 = d2)
 res <- computeESSFixedSS(p0, p1, n_i, n_b, r,
@@ -67,5 +69,6 @@ LMEM2_res <- evaluateTwoStageScenarios(n_i,
                                        res$interim_threshold,
                                        res$pp_threshold,
                                        LMEM2_ef, n_sim = n_sim)
+})
 model_fp <- format_model_name(d1, d2)
 saveRDS(LMEM2_res, file.path(getwd(), "output", "fixedss_sim", model_fp))
