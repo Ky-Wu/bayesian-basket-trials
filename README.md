@@ -1,4 +1,4 @@
-# Optimal Local Exchangeability Two-Stage Designs for Basket Trials with Aggregated Futility Analysis
+# Optimal Bayesian Basket Trial Simulations
 
 This repository contains code implementation for the simulation comparison in "Optimal Local Exchangeability Two-Stage Designs for Basket Trials with Aggregated Futility Analysis."
 
